@@ -1,55 +1,78 @@
-# openpilot-installer-generator
+# C3 openpilot installer generator
 
-PHP site that patches a **prebuilt AGNOS installer ELF** with your fork username, branch, and loading message.
+A Cloudflare Workers service that generates openpilot fork installers for comma three (NEOS), as well as newer AGNOS devices. It patches a fresh copy of a prebuilt installer ELF for each request with the requested GitHub username, branch, and optional loading message.
 
-This fork also contains a Cloudflare Workers port. It keeps the original PHP implementation for reference and serves the same prebuilt NEOS/AGNOS binaries from Worker Assets, patching a fresh copy per request.
+The original PHP implementation remains in [`fork/`](fork/) for reference. This repository is based on [mouxangithub/openpilot-installer-generator](https://github.com/mouxangithub/openpilot-installer-generator).
 
-## Cloudflare Worker
+## Live service
+
+The public deployment is available at:
+
+```text
+https://c3op.mindflakes.com
+```
+
+Use a setup URL in this format:
+
+```text
+https://c3op.mindflakes.com/<github-username>/<branch>/<optional-loading-message>
+```
+
+For example:
+
+```text
+https://c3op.mindflakes.com/optskug/tskm-c3
+```
+
+Enter the URL under **Custom Software** during device setup. The response depends on the requesting user agent:
+
+- `NEOSSetup-*` receives the legacy NEOS/comma three installer.
+- `AGNOSSetup-*` receives the AGNOS installer.
+- `Wget/*` receives the AGNOS installer, matching the upstream behavior.
+- A normal browser receives a page with explicit NEOS and AGNOS download links.
+
+The service recognizes the upstream `stock`, `commaai`, `dragonpilot`, `dp`, `sunnypilot`, `sp`, `sshane`, `shane`, `smiskol`, and `sa` aliases. Use `_` as the branch to let Git use the repository's default branch.
+
+Only install software from repositories and branches you trust. The generated executable downloads and installs code from the URL embedded in it.
+
+## Development
+
+Requires a current Node.js release.
 
 ```sh
 npm install
 npm test
 npm run dev
+```
+
+In another terminal, verify every user-agent path against the local Worker:
+
+```sh
 node scripts/verify-endpoint.mjs http://127.0.0.1:8787
+```
+
+The test verifies that NEOS, AGNOS, Wget, and browser requests receive the expected response, binary size, repository, and branch.
+
+## Deployment
+
+[`wrangler.jsonc`](wrangler.jsonc) configures the `c3op.mindflakes.com` custom domain and stores the two installer templates as Cloudflare Worker Assets.
+
+```sh
 npm run deploy
 npm run test:deployed
 ```
 
-Routing remains user-agent dependent:
+`npm run deploy` copies the installer templates into the ignored `.worker-assets/` staging directory before invoking Wrangler.
 
-- `NEOSSetup-*` receives the legacy NEOS/C3 installer.
-- `AGNOSSetup-*` and `Wget/*` receive the AGNOS installer.
-- Browsers receive a small download page with explicit NEOS and AGNOS links.
+## Installer templates
 
-The deploy target is configured as the custom domain `c3op.mindflakes.com`. The endpoint test accepts a different base URL as its first argument or through `BASE_URL`.
+- [`fork/installer_openpilot_neos`](fork/installer_openpilot_neos) is the legacy NEOS/comma three template.
+- [`fork/installer_openpilot_agnos`](fork/installer_openpilot_agnos) is the AGNOS template.
+- [`source/installer_source_neos.c`](source/installer_source_neos.c) contains the legacy NEOS source.
+- [`source/installer_source_agnos.cc`](source/installer_source_agnos.cc) contains the legacy Qt AGNOS source for reference only.
 
-## AGNOS 18.4+ (comma  four)
+AGNOS 18.4 and newer require the raylib template built from openpilot; the old Qt template does not work. See [`BUILD_AGNOS.md`](BUILD_AGNOS.md) for build and replacement instructions.
 
-The old Qt template in this repo **does not work** on AGNOS 18.4+. Use the raylib template built from openpilot:
+## Credits
 
-1. Build `installer_fork_template` in your openpilot fork (`scons extras`)
-2. Copy it to `fork/installer_openpilot_agnos`
-3. Deploy `fork/` to PHP hosting
-
-**Full steps:** [BUILD_AGNOS.md](BUILD_AGNOS.md)
-
-Example setup URL:
-
-```text
-https://your-host/fork/mouxangithub/master-c3
-```
-
-## Legacy (NEOS / old AGNOS)
-
-- [NEOS installer source](/source/installer_source_neos.c)
-- [Legacy Qt AGNOS source](/source/installer_source_agnos.cc) (reference only)
-
-## Usage
-
-`https://your-host/fork/[username]/{branch}/{loading_msg}`
-
-During comma  four factory setup, enter the URL under **Custom Software**. The device sends `User-Agent: AGNOSSetup-<version>` and receives a patched ELF.
-
----
-
-[Idea](https://discord.com/channels/469524606043160576/524594418628558878/827726757201051658) by [nelsonjchen](https://github.com/nelsonjchen) on the [comma.ai community Discord](https://discord.comma.ai/)!
+Based on the installer generator maintained by [mouxangithub](https://github.com/mouxangithub) and the original concept by [nelsonjchen](https://github.com/nelsonjchen), shared in the [comma.ai community Discord](https://discord.comma.ai/).
