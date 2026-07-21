@@ -1,0 +1,16 @@
+{
+  "name": "c3op-worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "prepare:assets": "rm -rf .worker-assets && mkdir -p .worker-assets && cp fork/installer_openpilot_agnos fork/installer_openpilot_neos .worker-assets/",
+    "dev": "npm run prepare:assets && wrangler dev",
+    "test": "node --test",
+    "test:deployed": "node scripts/verify-endpoint.mjs https://c3op.mindflakes.com",
+    "deploy": "npm run prepare:assets && wrangler deploy"
+  },
+  "devDependencies": {
+    "wrangler": "^4.112.0"
+  }
+}

@@ -2,6 +2,27 @@
 
 PHP site that patches a **prebuilt AGNOS installer ELF** with your fork username, branch, and loading message.
 
+This fork also contains a Cloudflare Workers port. It keeps the original PHP implementation for reference and serves the same prebuilt NEOS/AGNOS binaries from Worker Assets, patching a fresh copy per request.
+
+## Cloudflare Worker
+
+```sh
+npm install
+npm test
+npm run dev
+node scripts/verify-endpoint.mjs http://127.0.0.1:8787
+npm run deploy
+npm run test:deployed
+```
+
+Routing remains user-agent dependent:
+
+- `NEOSSetup-*` receives the legacy NEOS/C3 installer.
+- `AGNOSSetup-*` and `Wget/*` receive the AGNOS installer.
+- Browsers receive a small download page with explicit NEOS and AGNOS links.
+
+The deploy target is configured as the custom domain `c3op.mindflakes.com`. The endpoint test accepts a different base URL as its first argument or through `BASE_URL`.
+
 ## AGNOS 18.4+ (comma  four)
 
 The old Qt template in this repo **does not work** on AGNOS 18.4+. Use the raylib template built from openpilot:
