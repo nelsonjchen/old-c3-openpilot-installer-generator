@@ -1,44 +1,67 @@
 <?php
-# Constants
-define("E", "27182818284590452353602874713526624977572470936999595");  # placeholder for username, includes "openpilot" repo name
-define("PI", "314159265358979323846264338327950288419");  # placeholder for loading msg
-define("GOLDEN", "161803398874989484820458683436563811772030917980576286213544862270526046281890244970720720418939113748475408807538689175212663386222353693179318006076672635443338908659593958290563832266131992829026788067520876689250171169620703222104321626954862629631361");  # placeholder for branch
+require_once __DIR__ . "/installer_config.php";
 
-# Replaces placeholder with input + any needed NULs, plus does length checking
 function fill_in_arg($placeholder, $replace_with, $binary, $padding, $arg_type) {
-    $placeholder_len = mb_strlen($placeholder);
-    if ($placeholder_len - strlen($replace_with) < 0) { echo "Error: Invalid " . $arg_type . " length!"; exit; }
+    $placeholder_len = strlen($placeholder);
+    if ($placeholder_len < strlen($replace_with)) {
+        echo "Error: Invalid " . $arg_type . " length!";
+        exit;
+    }
 
     $replace_with .= str_repeat($padding, $placeholder_len - strlen($replace_with));
     return str_replace($placeholder, $replace_with, $binary);
 }
 
+$template_path = __DIR__ . "/" . INSTALLER_TEMPLATE_BINARY;
+if (!file_exists($template_path)) {
+    echo "Error: missing template binary " . INSTALLER_TEMPLATE_BINARY . ". Build selfdrive/ui/installer/installers/installer_fork_template on AGNOS 18.4+ and copy it here.";
+    exit;
+}
 
-# Load installer binary
-$installer_binary = file_get_contents(getcwd() . "/installer_openpilot_agnos");  # load the unmodified installer
+$installer_binary = file_get_contents($template_path);
 
-$username = $_GET["username"];
-$branch = $_GET["branch"];
-$loading_msg = $_GET["loading_msg"];
+$username = $_GET["username"] ?? "";
+$branch = $_GET["branch"] ?? "";
+$loading_msg = $_GET["loading_msg"] ?? "";
 
-if ($username == "") exit;  # discount assertions
-if ($loading_msg == "") exit;
+if ($username == "") {
+    echo "Error: username required";
+    exit;
+}
+if ($loading_msg == "") {
+    $loading_msg = $username;
+}
 
+$username = substr($username, 0, 39);
+$branch = substr($branch, 0, 255);
+$loading_msg = substr($loading_msg, 0, 39);
 
-# Handle username replacement:
-$installer_binary = fill_in_arg(E, $username . "/openpilot.git", $installer_binary, "\0", "username");
+$installer_binary = fill_in_arg(
+    INSTALLER_USERNAME_SLOT,
+    $username . "/openpilot.git",
+    $installer_binary,
+    "\0",
+    "username"
+);
 
-# Handle branch replacement (3 occurrences):
-$installer_binary = fill_in_arg(GOLDEN, $branch, $installer_binary, "\0", "branch");
+$installer_binary = fill_in_arg(
+    INSTALLER_BRANCH_SLOT,
+    $branch,
+    $installer_binary,
+    "\0",
+    "branch"
+);
 
-# Handle loading message replacement:
-$installer_binary = fill_in_arg(PI, $loading_msg, $installer_binary, " ", "loading message");  // QT actually displays null characters
+$installer_binary = fill_in_arg(
+    INSTALLER_LOADING_MSG_SLOT,
+    $loading_msg,
+    $installer_binary,
+    " ",
+    "loading message"
+);
 
-
-# Now download
 header("Content-Type: application/octet-stream");
-header("Content-Length: " . strlen($installer_binary));  # we want actual bytes
+header("Content-Length: " . strlen($installer_binary));
 header("Content-Disposition: attachment; filename=installer_openpilot");
-echo $installer_binary;  # downloads without saving to a file
+echo $installer_binary;
 exit;
-?>
